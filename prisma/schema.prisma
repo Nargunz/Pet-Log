@@ -1,0 +1,20 @@
+// Prisma schema for Pet Care Log app
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Log {
+  id        Int      @id @default(autoincrement())
+  petName   String   @db.VarChar(191)
+  task      String   @db.VarChar(100)
+  time      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
