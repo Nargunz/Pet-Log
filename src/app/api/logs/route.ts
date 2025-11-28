@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
@@ -16,6 +17,14 @@ const logSelect =
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const pool = getPool();
     const [rows] = await pool.query<LogRow[]>(`${logSelect} ORDER BY time DESC`);
     return NextResponse.json(rows);
@@ -30,6 +39,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== "admin") {
+      return NextResponse.json(
+        { message: "Unauthorized - Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { petName, task, time } = body;
 
@@ -51,7 +68,7 @@ export async function POST(request: Request) {
 
     const pool = getPool();
     const [result] = await pool.execute<ResultSetHeader>(
-      "INSERT INTO logs (pet_name, task, time) VALUES (?, ?, ?)",
+      "INSERT INTO logs (pet_name, task, time, updated_at) VALUES (?, ?, ?, NOW())",
       [petName.trim(), task.trim(), parsedDate]
     );
 

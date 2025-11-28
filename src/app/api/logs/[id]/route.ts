@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
@@ -19,6 +20,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== "admin") {
+      return NextResponse.json(
+        { message: "Unauthorized - Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { petName, task, time } = body;
     const { id: idParam } = await params;
@@ -47,7 +56,7 @@ export async function PUT(
     const pool = getPool();
 
     await pool.execute<ResultSetHeader>(
-      "UPDATE logs SET pet_name = ?, task = ?, time = ? WHERE id = ?",
+      "UPDATE logs SET pet_name = ?, task = ?, time = ?, updated_at = NOW() WHERE id = ?",
       [petName.trim(), task.trim(), parsedDate, id]
     );
 
@@ -74,6 +83,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session || session.user?.role !== "admin") {
+      return NextResponse.json(
+        { message: "Unauthorized - Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const { id: idParam } = await params;
     const id = Number(idParam);
 
